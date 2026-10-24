@@ -1,13 +1,11 @@
-   > ⚠️ 공개 연구 데이터로 만든 포트폴리오 프로젝트입니다. 의학적 진단을 대신하지 않습니다.  
-  
-   🔗 **바로 써보기: [gyeong061.github.io/bloodcell-counter](https://gyeong061.github.io/bloodcell-counter/)** — 설치 없이 브라우저에서 동작하며, 올린 사진은 외부로 전송되지 않습니다.
-
 # 🩸 Blood Cell Counter — 혈액 도말 이미지 혈구 자동 카운팅
 
 혈액 도말 현미경 이미지를 올리면 **적혈구(RBC)·백혈구(WBC)·혈소판(Platelets)** 을 YOLO11로 탐지해 세고,
 여러 시야를 합친 **검사 보조 PDF 리포트**를 만들어 주는 서비스입니다.
 
 > ⚠️ 공개 연구 데이터로 만든 포트폴리오 프로젝트입니다. 의학적 진단을 대신하지 않습니다.
+>
+>    🔗 **바로 써보기: [gyeong061.github.io/bloodcell-counter](https://gyeong061.github.io/bloodcell-counter/)** — 설치 없이 브라우저에서 동작하며, 올린 사진은 외부로 전송되지 않습니다.
 
 | 웹 앱 (Streamlit · YOLO11s) | 브라우저 데모 (YOLO11n) |
 |---|---|
