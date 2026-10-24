@@ -239,7 +239,7 @@ td .diff-pos { color: var(--rbc); } td .diff-neg { color: var(--wbc); }
   // ---- 설정: config.json (export_web.py가 만듦). 읽지 못하면 아래 기본값 사용 ----
   const CLASSES = ["RBC", "WBC", "Platelets"];
   const STRIDE = 32, LOW_CONF = 0.4, MIN_RBC = 5;
-  let AUTO_CONF = { RBC: 0.65, WBC: 0.7, Platelets: 0.2 };
+  let AUTO_CONF = { RBC: 0.8, WBC: 0.55, Platelets: 0.5 };
   let IOU = 0.5, MAX_DET = 300, IMGSZ = 640;
   let MODEL_PARTS = ["model.part1.txt", "model.part2.txt"];
   let SAMPLES = [];
@@ -580,6 +580,7 @@ td .diff-pos { color: var(--rbc); } td .diff-neg { color: var(--wbc); }
     try {
       if (typeof ort === "undefined") throw new Error("런타임 스크립트");
       await loadConfig().catch(() => {});
+      buildThresholds();   // config.json의 임계값으로 패널 표시를 다시 그림
       await loadModel();
       setStatus("ready", "모델 준비됨");
       if (SAMPLES.length) {

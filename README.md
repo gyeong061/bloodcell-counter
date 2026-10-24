@@ -7,6 +7,10 @@
 >
 >    🔗 **바로 써보기: [gyeong061.github.io/bloodcell-counter](https://gyeong061.github.io/bloodcell-counter/)** — 설치 없이 브라우저에서 동작하며, 올린 사진은 외부로 전송되지 않습니다.
 
+![브라우저 데모 사용 장면](docs/demo.gif)
+
+*예시 시야 분석 → 클래스별 표시 끄고 켜기 → 임계값을 바꾸면 다시 추론하지 않고 개수가 바로 바뀜 → 새 사진 2장 올려 분석*
+
 | 웹 앱 (Streamlit · YOLO11s) | 브라우저 데모 (YOLO11n) |
 |---|---|
 | ![웹 앱](docs/app_screenshot.png) | ![브라우저 데모](docs/web_demo.png) |
