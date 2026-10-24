@@ -1,0 +1,11 @@
+ultralytics>=8.3.0
+pyyaml>=6.0
+matplotlib>=3.8
+pillow>=10.0
+pandas>=2.0
+reportlab>=4.0
+streamlit>=1.40
+fastapi>=0.115
+uvicorn[standard]>=0.32
+python-multipart>=0.0.12
+openpyxl>=3.1

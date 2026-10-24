@@ -1,0 +1,35 @@
+# 본학습 설정 — TXL-PBC · YOLO11s + 현미경 도메인 증강
+# 실행: python -m bloodcount.train
+model: yolo11s.pt
+device: auto            # auto = CUDA(Colab) → MPS(Mac) → CPU
+
+hyperparameters:
+  epochs: 100
+  batch: 16
+  imgsz: 640            # TXL-PBC 이미지 크기는 256~640으로 섞여 있음 → 640으로 통일
+  patience: 20          # 20 epoch 동안 개선 없으면 조기 종료
+  workers: 2
+  project: runs/detect
+  name: txl_yolo11s
+  seed: 42
+  pretrained: true
+  optimizer: auto
+  cos_lr: true
+  close_mosaic: 10
+  exist_ok: true
+
+# 현미경 도말 이미지: 위아래·좌우 방향 의미 없음 → 터빈과 달리 상하 반전 허용
+augmentation:
+  flipud: 0.5
+  fliplr: 0.5
+  # 염색 농도·조명 차이 → 색조/채도/밝기 변화
+  hsv_h: 0.02
+  hsv_s: 0.5
+  hsv_v: 0.3
+  degrees: 0.0          # 회전은 박스가 커지는 부작용 → 사용 안 함
+  translate: 0.1
+  scale: 0.3            # 배율이 크게 바뀌면 혈구 크기 단서가 깨짐 → 약하게
+  mosaic: 1.0
+  mixup: 0.0            # 반투명 겹침은 혈구 경계를 흐림 → 사용 안 함
+
+oom_fallback_batches: [16, 8, 4]

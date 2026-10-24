@@ -1,0 +1,41 @@
+dataset: bccd
+classes:
+  RBC:
+    boxes: 4153
+    mean_per_image: 11.41
+    max_per_image: 27
+    images_with_zero: 15
+    median_box_side: 0.21
+  WBC:
+    boxes: 372
+    mean_per_image: 1.02
+    max_per_image: 2
+    images_with_zero: 6
+    median_box_side: 0.38
+  Platelets:
+    boxes: 361
+    mean_per_image: 0.99
+    max_per_image: 6
+    images_with_zero: 163
+    median_box_side: 0.081
+by_source:
+  BCCD:
+    images: 364
+    splits:
+      train: 205
+      val: 87
+      test: 72
+    mean_per_image:
+      RBC: 11.41
+      WBC: 1.02
+      Platelets: 0.99
+    image_sizes_sample:
+      640x480: 50
+duplicates_across_splits: 1
+duplicate_examples:
+- a: train/BloodImage_00038
+  b: val/BloodImage_00037
+  distance: 13
+suspect_leaks:
+  val: 1
+  test: 0

@@ -1,0 +1,62 @@
+[
+ {
+  "file": "samples/sample_1.jpg",
+  "label": "예시 1 · BCCD",
+  "source": "BCCD",
+  "gt": {
+   "RBC": 20,
+   "WBC": 1,
+   "Platelets": 1
+  }
+ },
+ {
+  "file": "samples/sample_2.jpg",
+  "label": "예시 2 · BCCD",
+  "source": "BCCD",
+  "gt": {
+   "RBC": 22,
+   "WBC": 1,
+   "Platelets": 0
+  }
+ },
+ {
+  "file": "samples/sample_3.jpg",
+  "label": "예시 3 · BCCD",
+  "source": "BCCD",
+  "gt": {
+   "RBC": 26,
+   "WBC": 1,
+   "Platelets": 1
+  }
+ },
+ {
+  "file": "samples/sample_4.jpg",
+  "label": "예시 4 · BCCD",
+  "source": "BCCD",
+  "gt": {
+   "RBC": 18,
+   "WBC": 1,
+   "Platelets": 4
+  }
+ },
+ {
+  "file": "samples/sample_5.jpg",
+  "label": "예시 5 · BCDD",
+  "source": "BCDD",
+  "gt": {
+   "RBC": 15,
+   "WBC": 1,
+   "Platelets": 0
+  }
+ },
+ {
+  "file": "samples/sample_6.jpg",
+  "label": "예시 6 · PBC",
+  "source": "PBC",
+  "gt": {
+   "RBC": 12,
+   "WBC": 1,
+   "Platelets": 0
+  }
+ }
+]

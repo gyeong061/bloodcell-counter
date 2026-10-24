@@ -1,0 +1,24 @@
+# Baseline — TXL-PBC · YOLO11n + Ultralytics 기본 증강
+# 원 프로젝트의 교훈: 비교군과 epoch 수를 같게 맞춰야 "무엇이 효과였는지" 말할 수 있음
+# 실행: python -m bloodcount.train --config configs/train_baseline.yaml
+model: yolo11n.pt
+device: auto
+
+hyperparameters:
+  epochs: 100
+  batch: 16
+  imgsz: 640
+  patience: 20
+  workers: 2
+  project: runs/detect
+  name: txl_yolo11n
+  seed: 42
+  pretrained: true
+  optimizer: auto
+  cos_lr: true
+  close_mosaic: 10
+  exist_ok: true
+
+augmentation: {}        # 비워 두면 Ultralytics 기본값 사용
+
+oom_fallback_batches: [16, 8, 4]

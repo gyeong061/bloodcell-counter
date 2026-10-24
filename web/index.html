@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>혈구 카운터</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: 검사대 구조 — 왼쪽 조작 패널(입력·임계값) + 오른쪽 결과(집계 → 시야별 판독). 휴대폰에서는 한 열.
+   Color: 도말 염색에서 가져온 색 — 에오신(RBC 분홍), 헤마톡실린(WBC 보라), 혈소판(호박색). */
+:root {
+  --bg: #faf8f9;
+  --surface: #ffffff;
+  --sunken: #f2eef1;
+  --line: #e3dde2;
+  --fg: #221a26;
+  --muted: #6d6270;
+  --accent: #5a3e8c;
+  --accent-soft: #ece6f5;
+  --rbc: #c4455a;
+  --wbc: #4b52b5;
+  --plt: #b97a0e;
+  --warn-bg: #fdf3e2;
+  --warn-fg: #7a4d06;
+  --ok: #2f7a55;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17121a; --surface: #1f1923; --sunken: #2a222f; --line: #3a3140;
+    --fg: #efe8f1; --muted: #a99db0; --accent: #b9a1e6; --accent-soft: #2e2540;
+    --rbc: #ec7487; --wbc: #8f95f0; --plt: #e3ad4a;
+    --warn-bg: #3a2c12; --warn-fg: #f2c879; --ok: #6cc497;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17121a; --surface: #1f1923; --sunken: #2a222f; --line: #3a3140;
+  --fg: #efe8f1; --muted: #a99db0; --accent: #b9a1e6; --accent-soft: #2e2540;
+  --rbc: #ec7487; --wbc: #8f95f0; --plt: #e3ad4a;
+  --warn-bg: #3a2c12; --warn-fg: #f2c879; --ok: #6cc497;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 20px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.label { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* 머리말 */
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+header.top h1 { font-size: clamp(24px, 3.4vw, 32px); font-weight: 700; letter-spacing: -0.01em; }
+header.top p { margin: 4px 0 0; color: var(--muted); max-width: 62ch; }
+.status { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+  background: var(--sunken); font-size: 13px; color: var(--muted); white-space: nowrap; }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--plt); }
+.status[data-state="ready"] .dot { background: var(--ok); }
+.status[data-state="error"] .dot { background: var(--rbc); }
+
+/* 본문 2단 */
+.layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 18px; display: grid; gap: 18px; }
+@media (min-width: 861px) { .panel { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); } }
+.panel section { display: grid; gap: 10px; }
+
+.drop { border: 1.5px dashed var(--line); border-radius: var(--radius); padding: 18px 14px; text-align: center;
+  background: var(--sunken); cursor: pointer; transition: border-color .15s, background .15s; }
+.drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop strong { display: block; font-weight: 600; }
+.drop span { font-size: 13px; color: var(--muted); }
+.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 12px;
+  cursor: pointer; font-weight: 500; font-size: 14px; }
+.btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.btn.primary:hover:not(:disabled) { color: var(--bg); filter: brightness(1.08); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--sunken); border-radius: 8px; padding: 3px; gap: 3px; }
+.seg button { border: 0; background: transparent; border-radius: 6px; padding: 6px 8px; cursor: pointer; font-size: 13px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.thresholds { display: grid; gap: 8px; }
+.thr { display: grid; grid-template-columns: 78px minmax(0, 1fr) 44px; gap: 8px; align-items: center; font-size: 13px; }
+.thr input[type="range"] { width: 100%; accent-color: var(--accent); }
+.thr output { text-align: right; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+
+.legend { display: grid; gap: 6px; }
+.legend label { display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; }
+.legend input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+.sw { width: 14px; height: 14px; border-radius: 3px; border: 2px solid currentColor; }
+.c-rbc { color: var(--rbc); } .c-wbc { color: var(--wbc); } .c-plt { color: var(--plt); }
+
+/* 결과 */
+.results { display: grid; gap: 20px; min-width: 0; }
+.summary { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: grid; gap: 16px; }
+.summary-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: baseline; }
+.summary-head h2 { font-size: 18px; font-weight: 600; }
+.tally { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.tally > div { border-top: 3px solid currentColor; padding-top: 10px; display: grid; gap: 2px; }
+.tally .big { font-family: var(--font-num); font-size: clamp(30px, 4.6vw, 44px); font-weight: 600; line-height: 1.05; color: var(--fg); }
+.tally .name { font-weight: 600; font-size: 14px; }
+.tally .sub { font-size: 12.5px; color: var(--muted); }
+.ratios { display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: 14px; color: var(--muted); }
+.ratios b { color: var(--fg); font-family: var(--font-num); font-weight: 600; }
+.flags { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.flags li { background: var(--warn-bg); color: var(--warn-fg); border-radius: 8px; padding: 8px 12px; font-size: 13.5px; }
+.flags li b { font-weight: 600; }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 520px; }
+th, td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { background: var(--sunken); font-weight: 600; font-size: 12px; letter-spacing: .04em; color: var(--muted); }
+tbody tr:last-child td { border-bottom: 0; }
+td .gt { color: var(--muted); font-size: 12px; margin-left: 4px; }
+td .diff-pos { color: var(--rbc); } td .diff-neg { color: var(--wbc); }
+
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 16px; }
+.field { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: grid; }
+.field canvas { width: 100%; height: auto; display: block; background: var(--sunken); }
+.field .meta { padding: 12px 14px; display: grid; gap: 6px; }
+.field .title { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; min-width: 0; }
+.field .title span:first-child { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.chip { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); white-space: nowrap; }
+.counts { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; }
+.counts b { font-family: var(--font-num); }
+.field .warn { font-size: 12.5px; color: var(--warn-fg); background: var(--warn-bg); padding: 6px 10px; border-radius: 6px; }
+
+.note { font-size: 12.5px; color: var(--muted); max-width: 90ch; margin: 0; }
+.progress { height: 3px; background: var(--sunken); border-radius: 2px; overflow: hidden; }
+.progress > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (max-width: 520px) { .tally .big { font-size: 30px; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>혈구 카운터</h1>
+      <p>혈액 도말 현미경 사진(시야)을 올리면 적혈구·백혈구·혈소판을 찾아 세고, 여러 시야를 합쳐 집계합니다. 모든 계산은 이 브라우저 안에서 이루어지며 사진은 어디에도 전송되지 않습니다.</p>
+    </div>
+    <div class="status" id="status" data-state="loading" role="status"><span class="dot"></span><span id="status-text">모델 불러오는 중…</span></div>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" aria-label="입력과 설정">
+      <section>
+        <div class="label">시야 이미지</div>
+        <label class="drop" id="drop" for="file-input">
+          <strong>사진 올리기</strong>
+          <span>클릭하거나 끌어다 놓기 · JPG, PNG · 여러 장 가능</span>
+          <input type="file" id="file-input" accept="image/*" multiple>
+        </label>
+        <div class="row">
+          <button class="btn" id="btn-samples" type="button" disabled>예시 시야 다시 보기</button>
+        </div>
+        <div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+      </section>
+
+      <section>
+        <div class="label">신뢰도 임계값</div>
+        <div class="seg" role="group" aria-label="임계값 방식">
+          <button type="button" id="mode-auto" aria-pressed="true">검증 세트 최적값</button>
+          <button type="button" id="mode-manual" aria-pressed="false">직접 조절</button>
+        </div>
+        <div class="thresholds" id="thresholds"></div>
+        <p class="hint" id="thr-hint">검증 세트에서 개수 오차가 가장 작았던 클래스별 값입니다. 낮추면 더 많이 찾고, 잘못 찾는 경우도 늘어납니다.</p>
+      </section>
+
+      <section>
+        <div class="label">이미지에 표시</div>
+        <div class="legend">
+          <label><input type="checkbox" id="show-RBC" checked><span class="sw c-rbc"></span>RBC 적혈구</label>
+          <label><input type="checkbox" id="show-WBC" checked><span class="sw c-wbc"></span>WBC 백혈구</label>
+          <label><input type="checkbox" id="show-Platelets" checked><span class="sw c-plt"></span>Platelets 혈소판</label>
+        </div>
+      </section>
+
+      <p class="note"><span id="model-note">YOLO11n · TXL-PBC 재라벨로 학습 (BCCD 시야 101장, 30 epoch).</span> 공개 연구 데이터로 만든 포트폴리오 데모이며 의학적 진단을 대신하지 않습니다.</p>
+    </aside>
+
+    <main class="results">
+      <section class="summary" aria-live="polite">
+        <div class="summary-head">
+          <h2 id="summary-title">전체 집계</h2>
+          <div class="row">
+            <button class="btn" id="btn-copy" type="button" disabled>결과 표 복사</button>
+          </div>
+        </div>
+        <div class="tally">
+          <div class="c-rbc"><span class="name">RBC 적혈구</span><span class="big" id="t-RBC">–</span><span class="sub" id="m-RBC">시야당 –</span></div>
+          <div class="c-wbc"><span class="name">WBC 백혈구</span><span class="big" id="t-WBC">–</span><span class="sub" id="m-WBC">시야당 –</span></div>
+          <div class="c-plt"><span class="name">Platelets 혈소판</span><span class="big" id="t-Platelets">–</span><span class="sub" id="m-Platelets">시야당 –</span></div>
+        </div>
+        <div class="ratios" id="ratios"></div>
+        <ul class="flags" id="flags"></ul>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>시야</th><th>RBC</th><th>WBC</th><th>Platelets</th><th>저신뢰 비율</th></tr></thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+        <p class="note" id="table-note"></p>
+      </section>
+
+      <section class="fields" id="fields" aria-label="시야별 판독"></section>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.wasm.min.js"></script>
+<script>
+(() => {
+  "use strict";
+
+  // ---- 설정: config.json (export_web.py가 만듦). 읽지 못하면 아래 기본값 사용 ----
+  const CLASSES = ["RBC", "WBC", "Platelets"];
+  const STRIDE = 32, LOW_CONF = 0.4, MIN_RBC = 5;
+  let AUTO_CONF = { RBC: 0.65, WBC: 0.7, Platelets: 0.2 };
+  let IOU = 0.5, MAX_DET = 300, IMGSZ = 640;
+  let MODEL_PARTS = ["model.part1.txt", "model.part2.txt"];
+  let SAMPLES = [];
+
+  async function loadConfig() {
+    const r = await fetch("config.json");
+    if (!r.ok) throw new Error("설정 파일");
+    const cfg = await r.json();
+    AUTO_CONF = { ...AUTO_CONF, ...cfg.class_conf };
+    IOU = cfg.iou ?? IOU;
+    MAX_DET = cfg.max_det ?? MAX_DET;
+    IMGSZ = cfg.imgsz ?? IMGSZ;
+    MODEL_PARTS = cfg.model_parts ?? MODEL_PARTS;
+    SAMPLES = cfg.samples ?? [];
+    if (cfg.model_note) document.getElementById("model-note").textContent = cfg.model_note;
+  }
+
+  const $ = (id) => document.getElementById(id);
+  const state = {
+    session: null,
+    mode: "auto",
+    manual: { RBC: 0.25, WBC: 0.25, Platelets: 0.25 },
+    show: { RBC: true, WBC: true, Platelets: true },
+    fields: [],      // { name, img, gt?, raw: [{cls, score, box}] }
+    isSample: true,
+  };
+
+  // ---- 상태 표시 ----
+  function setStatus(kind, text) {
+    $("status").dataset.state = kind;
+    $("status-text").textContent = text;
+  }
+  function setProgress(frac) { $("progress-bar").style.width = `${Math.round(frac * 100)}%`; }
+
+  // ---- 모델 ----
+  // 모델(ONNX, 11.9MB)은 텍스트 파일 두 개에 base64로 나눠 담겨 있음 → 받아서 이어 붙임
+  async function loadModelBytes() {
+    const parts = await Promise.all(MODEL_PARTS.map((name) =>
+      fetch(name).then((r) => { if (!r.ok) throw new Error("모델 파일"); return r.text(); })));
+    const chunks = parts.map((b64) => {
+      const bin = atob(b64.trim());
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    });
+    const all = new Uint8Array(chunks.reduce((s, c) => s + c.length, 0));
+    let offset = 0;
+    for (const c of chunks) { all.set(c, offset); offset += c.length; }
+    return all;
+  }
+
+  async function loadModel() {
+    ort.env.wasm.numThreads = 1;   // 교차 출처 격리 없이 동작하도록 단일 스레드
+    ort.env.wasm.proxy = false;
+    ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/";
+    // 런타임 wasm을 페이지 옆에 두면 그걸 쓰고(외부 요청이 막힌 환경), 없으면 CDN에서 받음(GitHub Pages)
+    const [wasm, model] = await Promise.all([
+      fetch("ort-wasm-simd-threaded.wasm").then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null),
+      loadModelBytes(),
+    ]);
+    if (wasm) ort.env.wasm.wasmBinary = wasm;
+    state.session = await ort.InferenceSession.create(model, { executionProviders: ["wasm"] });
+  }
+
+  // ---- 전처리: Ultralytics와 같은 letterbox (긴 변 640, 32의 배수로 패딩, 회색 114) ----
+  function letterbox(img) {
+    const w = img.naturalWidth, h = img.naturalHeight;
+    const r = Math.min(IMGSZ / w, IMGSZ / h);
+    const nw = Math.round(w * r), nh = Math.round(h * r);
+    const W = Math.ceil(nw / STRIDE) * STRIDE, H = Math.ceil(nh / STRIDE) * STRIDE;
+    const px = Math.round((W - nw) / 2 - 0.1), py = Math.round((H - nh) / 2 - 0.1);
+    const c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    ctx.fillStyle = "rgb(114,114,114)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, px, py, nw, nh);
+    const { data } = ctx.getImageData(0, 0, W, H);
+    const plane = W * H, input = new Float32Array(3 * plane);
+    for (let i = 0; i < plane; i++) {
+      input[i] = data[i * 4] / 255;
+      input[plane + i] = data[i * 4 + 1] / 255;
+      input[2 * plane + i] = data[i * 4 + 2] / 255;
+    }
+    return { tensor: new ort.Tensor("float32", input, [1, 3, H, W]), r, px, py };
+  }
+
+  function iou(a, b) {
+    const x1 = Math.max(a[0], b[0]), y1 = Math.max(a[1], b[1]);
+    const x2 = Math.min(a[2], b[2]), y2 = Math.min(a[3], b[3]);
+    const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+    return inter / ((a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter + 1e-9);
+  }
+
+  // ---- 추론 + 후처리 (낮은 임계값 0.05로 한 번만 추론해 두고, 임계값 변경은 필터로) ----
+  async function detect(img) {
+    const { tensor, r, px, py } = letterbox(img);
+    const out = (await state.session.run({ images: tensor })).output0;
+    const [, ch, n] = out.dims, d = out.data;
+    const cand = [];
+    for (let j = 0; j < n; j++) {
+      let best = 0, k = 0;
+      for (let c = 4; c < ch; c++) { const s = d[c * n + j]; if (s > best) { best = s; k = c - 4; } }
+      if (best < 0.05) continue;
+      const cx = d[j], cy = d[n + j], bw = d[2 * n + j], bh = d[3 * n + j];
+      cand.push({ cls: CLASSES[k], score: best,
+        box: [(cx - bw / 2 - px) / r, (cy - bh / 2 - py) / r, (cx + bw / 2 - px) / r, (cy + bh / 2 - py) / r] });
+    }
+    cand.sort((a, b) => b.score - a.score);
+    return cand;
+  }
+
+  // 임계값 적용 후 클래스별 NMS (Ultralytics와 같은 순서: 최소 임계값 → NMS → 클래스별 임계값)
+  function thresholds() { return state.mode === "auto" ? AUTO_CONF : state.manual; }
+  function finalize(raw) {
+    const th = thresholds();
+    const minTh = Math.min(...CLASSES.map((c) => th[c]));
+    const keep = [];
+    for (const det of raw) {
+      if (det.score < minTh) break;
+      if (keep.some((k) => k.cls === det.cls && iou(k.box, det.box) > IOU)) continue;
+      keep.push(det);
+      if (keep.length >= MAX_DET) break;
+    }
+    return keep.filter((k) => k.score >= th[k.cls]);
+  }
+
+  function countOf(dets) {
+    const c = { RBC: 0, WBC: 0, Platelets: 0 };
+    dets.forEach((d) => c[d.cls]++);
+    return c;
+  }
+  function flagsFor(counts, lowRatio) {
+    const f = [];
+    if (counts.RBC < MIN_RBC) f.push(`RBC가 ${MIN_RBC}개 미만입니다. 초점·조명·시야 위치를 확인하세요.`);
+    if (counts.WBC === 0) f.push("WBC가 검출되지 않았습니다. 다른 시야를 추가로 촬영해 보세요.");
+    if (lowRatio >= 0.3) f.push(`신뢰도 낮은 검출이 ${Math.round(lowRatio * 100)}%입니다. 결과를 직접 검토하세요.`);
+    return f;
+  }
+
+  // ---- 그리기 ----
+  function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function draw(field, dets) {
+    const cv = field.canvas, img = field.img;
+    cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+    const ctx = cv.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const color = { RBC: cssVar("--rbc"), WBC: cssVar("--wbc"), Platelets: cssVar("--plt") };
+    ctx.lineWidth = Math.max(1.5, cv.width / 320);
+    for (const d of dets) {
+      if (!state.show[d.cls]) continue;
+      ctx.strokeStyle = color[d.cls];
+      const [x1, y1, x2, y2] = d.box;
+      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+    }
+  }
+
+  // ---- 렌더링 ----
+  function fmtDiff(pred, gt) {
+    if (gt === undefined) return "";
+    const d = pred - gt;
+    const cls = d > 0 ? "diff-pos" : d < 0 ? "diff-neg" : "";
+    return `<span class="gt">정답 ${gt}<span class="${cls}">${d === 0 ? "" : ` (${d > 0 ? "+" : ""}${d})`}</span></span>`;
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch])); }
+
+  function render() {
+    const results = state.fields.map((f) => {
+      const dets = finalize(f.raw);
+      const counts = countOf(dets);
+      const low = dets.length ? dets.filter((d) => d.score < LOW_CONF).length / dets.length : 0;
+      return { f, dets, counts, low, flags: flagsFor(counts, low) };
+    });
+
+    // 집계
+    const n = results.length;
+    const tot = { RBC: 0, WBC: 0, Platelets: 0 };
+    results.forEach((r) => CLASSES.forEach((c) => (tot[c] += r.counts[c])));
+    $("summary-title").textContent = n ? `전체 집계 · 시야 ${n}장${state.isSample ? " (예시)" : ""}` : "전체 집계";
+    CLASSES.forEach((c) => {
+      $(`t-${c}`).textContent = n ? tot[c] : "–";
+      $(`m-${c}`).textContent = n ? `시야당 ${(tot[c] / n).toFixed(1)}` : "시야당 –";
+    });
+    $("ratios").innerHTML = tot.RBC
+      ? `<span>RBC 100개당 WBC <b>${(tot.WBC / tot.RBC * 100).toFixed(2)}</b></span><span>RBC 100개당 혈소판 <b>${(tot.Platelets / tot.RBC * 100).toFixed(2)}</b></span><span>촬영한 시야 기준 상대 비율이며 혈중 농도가 아닙니다</span>`
+      : "";
+    $("flags").innerHTML = results.flatMap((r) => r.flags.map((fl) => `<li><b>${esc(r.f.name)}</b> · ${esc(fl)}</li>`)).join("");
+
+    // 표
+    const hasGt = results.some((r) => r.f.gt);
+    $("table-body").innerHTML = results.map((r) => `<tr><td>${esc(r.f.name)}</td>${CLASSES.map((c) =>
+      `<td class="num">${r.counts[c]}${r.f.gt ? fmtDiff(r.counts[c], r.f.gt[c]) : ""}</td>`).join("")}<td class="num">${Math.round(r.low * 100)}%</td></tr>`).join("");
+    if (hasGt) {
+      const mae = CLASSES.map((c) => {
+        const rows = results.filter((r) => r.f.gt);
+        return `${c} ${(rows.reduce((s, r) => s + Math.abs(r.counts[c] - r.f.gt[c]), 0) / rows.length).toFixed(1)}개`;
+      }).join(" · ");
+      $("table-note").textContent = `예시 시야는 TXL-PBC test 세트에서 골랐고 모델 학습에 쓰이지 않았습니다. "정답"은 사람이 다시 라벨링한 개수입니다. 이미지당 평균 오차: ${mae}.`;
+    } else {
+      $("table-note").textContent = "";
+    }
+
+    // 시야 카드
+    results.forEach((r) => {
+      const f = r.f;
+      f.countsEl.innerHTML = CLASSES.map((c) => `<span class="c-${c === "Platelets" ? "plt" : c.toLowerCase()}">${c} <b>${r.counts[c]}</b></span>`).join("");
+      f.warnEl.hidden = !r.flags.length;
+      f.warnEl.textContent = r.flags.join(" ");
+      draw(f, r.dets);
+    });
+    $("btn-copy").disabled = !n;
+  }
+
+  function addFieldCard(field) {
+    const card = document.createElement("article");
+    card.className = "field";
+    card.innerHTML = `<canvas role="img" aria-label="${esc(field.name)} 탐지 결과"></canvas>
+      <div class="meta"><div class="title"><span title="${esc(field.name)}">${esc(field.name)}</span>${field.chip ? `<span class="chip">${esc(field.chip)}</span>` : ""}</div>
+      <div class="counts"></div><div class="warn" hidden></div></div>`;
+    field.canvas = card.querySelector("canvas");
+    field.countsEl = card.querySelector(".counts");
+    field.warnEl = card.querySelector(".warn");
+    $("fields").appendChild(card);
+  }
+
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("이미지를 읽을 수 없습니다"));
+      img.src = src;
+    });
+  }
+
+  async function analyze(items, isSample) {
+    if (!state.session) return;
+    state.fields = [];
+    state.isSample = isSample;
+    $("fields").innerHTML = "";
+    setProgress(0);
+    const failed = [];
+    for (let i = 0; i < items.length; i++) {
+      setStatus("loading", `분석 중 ${i + 1}/${items.length}`);
+      try {
+        const img = await loadImage(items[i].src);
+        const field = { name: items[i].name, chip: items[i].chip, gt: items[i].gt, img };
+        field.raw = await detect(img);
+        state.fields.push(field);
+        addFieldCard(field);
+        render();
+      } catch (e) {
+        failed.push(items[i].name);
+      }
+      setProgress((i + 1) / items.length);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    setStatus("ready", failed.length ? `완료 · ${failed.length}장은 이미지로 읽지 못함` : `준비됨 · 시야 ${state.fields.length}장 분석`);
+    render();
+  }
+
+  // ---- 임계값 UI ----
+  function buildThresholds() {
+    const auto = state.mode === "auto";
+    const th = thresholds();
+    $("thresholds").innerHTML = CLASSES.map((c) => `<div class="thr"><label for="thr-${c}">${c}</label>
+      <input type="range" id="thr-${c}" min="0.05" max="0.9" step="0.05" value="${th[c]}" ${auto ? "disabled" : ""}>
+      <output class="num" id="thr-out-${c}" for="thr-${c}">${th[c].toFixed(2)}</output></div>`).join("");
+    CLASSES.forEach((c) => {
+      $(`thr-${c}`).addEventListener("input", (e) => {
+        state.manual[c] = parseFloat(e.target.value);
+        $(`thr-out-${c}`).textContent = state.manual[c].toFixed(2);
+        render();
+      });
+    });
+    $("thr-hint").textContent = auto
+      ? "검증 세트에서 개수 오차가 가장 작았던 클래스별 값입니다. 낮추면 더 많이 찾고, 잘못 찾는 경우도 늘어납니다."
+      : "값을 바꾸면 다시 추론하지 않고 바로 반영됩니다.";
+  }
+  function setMode(mode) {
+    state.mode = mode;
+    if (mode === "manual") state.manual = { ...AUTO_CONF };
+    $("mode-auto").setAttribute("aria-pressed", mode === "auto");
+    $("mode-manual").setAttribute("aria-pressed", mode === "manual");
+    buildThresholds();
+    render();
+  }
+  $("mode-auto").addEventListener("click", () => setMode("auto"));
+  $("mode-manual").addEventListener("click", () => setMode("manual"));
+  CLASSES.forEach((c) => $(`show-${c}`).addEventListener("change", (e) => { state.show[c] = e.target.checked; render(); }));
+
+  // ---- 입력 ----
+  function filesToItems(files) {
+    return [...files].filter((f) => f.type.startsWith("image/") || /\.(jpe?g|png|bmp|webp|tiff?)$/i.test(f.name))
+      .map((f) => ({ name: f.name, src: URL.createObjectURL(f), chip: "업로드" }));
+  }
+  $("file-input").addEventListener("change", (e) => {
+    const items = filesToItems(e.target.files);
+    if (items.length) analyze(items, false);
+    e.target.value = "";
+  });
+  const drop = $("drop");
+  ["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((t) => drop.addEventListener(t, () => drop.classList.remove("over")));
+  drop.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const items = filesToItems(e.dataTransfer.files);
+    if (items.length) analyze(items, false);
+  });
+  const sampleItems = () => SAMPLES.map((s) => ({ name: s.label, src: s.file, gt: s.gt, chip: s.gt ? "정답 있음" : "예시" }));
+  $("btn-samples").addEventListener("click", () => analyze(sampleItems(), true));
+
+  $("btn-copy").addEventListener("click", async () => {
+    const rows = [["시야", ...CLASSES, "저신뢰비율"]];
+    state.fields.forEach((f) => {
+      const dets = finalize(f.raw), c = countOf(dets);
+      const low = dets.length ? dets.filter((d) => d.score < LOW_CONF).length / dets.length : 0;
+      rows.push([f.name, c.RBC, c.WBC, c.Platelets, `${Math.round(low * 100)}%`]);
+    });
+    const text = rows.map((r) => r.join("\t")).join("\n");
+    const btn = $("btn-copy");
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = "복사했습니다";
+    } catch {
+      btn.textContent = "복사하지 못했습니다";
+    }
+    setTimeout(() => (btn.textContent = "결과 표 복사"), 1800);
+  });
+
+  // 테마가 바뀌면 박스 색 다시 그리기
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+  new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  // ---- 시작 ----
+  buildThresholds();
+  (async () => {
+    try {
+      if (typeof ort === "undefined") throw new Error("런타임 스크립트");
+      await loadConfig().catch(() => {});
+      await loadModel();
+      setStatus("ready", "모델 준비됨");
+      if (SAMPLES.length) {
+        $("btn-samples").disabled = false;
+        await analyze(sampleItems(), true);
+      }
+    } catch (e) {
+      setStatus("error", `모델을 불러오지 못했습니다 (${e.message}). 새로고침해 보세요.`);
+    }
+  })();
+})();
+</script>
+</body>
+</html>

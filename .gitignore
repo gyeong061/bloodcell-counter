@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+external/
+data/
+runs/detect/*/weights/last.pt
+runs/predict/
+*.pt
+!runs/detect/*/weights/best.pt
+.DS_Store
+runs/eval/*/*_images.txt
+runs/eval/*/*_data.yaml
+runs/eval/*/val_*/
+*.onnx

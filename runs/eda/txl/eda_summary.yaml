@@ -1,0 +1,92 @@
+dataset: txl
+classes:
+  RBC:
+    boxes: 16302
+    mean_per_image: 12.94
+    max_per_image: 30
+    images_with_zero: 0
+    median_box_side: 0.231
+  WBC:
+    boxes: 1298
+    mean_per_image: 1.03
+    max_per_image: 6
+    images_with_zero: 5
+    median_box_side: 0.426
+  Platelets:
+    boxes: 543
+    mean_per_image: 0.43
+    max_per_image: 6
+    images_with_zero: 917
+    median_box_side: 0.089
+by_source:
+  BCCD:
+    images: 160
+    splits:
+      train: 101
+      val: 41
+      test: 18
+    mean_per_image:
+      RBC: 19.87
+      WBC: 1.02
+      Platelets: 1.04
+    image_sizes_sample:
+      640x480: 50
+  BCDD:
+    images: 100
+    splits:
+      train: 70
+      val: 16
+      test: 14
+    mean_per_image:
+      RBC: 16.34
+      WBC: 1.0
+      Platelets: 0.03
+    image_sizes_sample:
+      256x256: 50
+  PBC:
+    images: 500
+    splits:
+      train: 353
+      val: 97
+      test: 50
+    mean_per_image:
+      RBC: 12.65
+      WBC: 1.05
+      Platelets: 0.68
+    image_sizes_sample:
+      360x363: 50
+  Raabin-WBC:
+    images: 500
+    splits:
+      train: 358
+      val: 98
+      test: 44
+    mean_per_image:
+      RBC: 10.33
+      WBC: 1.02
+      Platelets: 0.06
+    image_sizes_sample:
+      575x575: 50
+duplicates_across_splits: 2
+duplicate_examples:
+- a: train/b9a2a0048ebd585794f6a1da21153506
+  b: test/eef539ef286e50e3888796e27c391b89
+  distance: 27
+- a: train/796a64020a9e5b5d8c3fca6b5ce5bf96
+  b: val/20723236a89850f295e6d06759de2e5a
+  distance: 28
+suspect_leaks:
+  val: 10
+  test: 2
+relabel_vs_bccd:
+  matched_images: 160
+  totals_original:
+    RBC: 1876
+    WBC: 163
+    Platelets: 131
+  totals_reannotated:
+    RBC: 3179
+    WBC: 164
+    Platelets: 167
+  rbc_added_per_image_mean: 8.14
+  images_with_more_rbc: 159
