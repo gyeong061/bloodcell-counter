@@ -9,7 +9,7 @@ bloodcount/evaluate.py — Test 세트 최종 평가 (탐지 지표 + 카운팅 
   카운팅 지표에는 이미지 단위 부트스트랩 95% 신뢰구간을 붙입니다.
 
 [신뢰도 임계값 탐색]
-  카운트는 임계값에 따라 크게 달라지므로 conf 0.05~0.70에서 클래스별 카운트 MAE가 가장 낮은 값을 찾습니다.
+  카운트는 임계값에 따라 크게 달라지므로 conf 0.05~0.90에서 클래스별 카운트 MAE가 가장 낮은 값을 찾습니다.
   임계값은 val에서 고르고 test에는 그대로 적용합니다 (test로 고르면 test 점수가 낙관적으로 나옴).
 
 [공정한 평가를 위한 제외 규칙]
@@ -42,7 +42,7 @@ from bloodcount.common import (CLASS_NAMES, DATA_YAML, ROOT, load_metadata, load
 from bloodcount.counting import CLASSES, Detection, bootstrap_ci, count_cells, count_errors
 from bloodcount.inference import PREDICT_CONFIG, CellCounter
 
-CONF_GRID = [round(0.05 * i, 2) for i in range(1, 15)]  # 0.05 ~ 0.70
+CONF_GRID = [round(0.05 * i, 2) for i in range(1, 19)]  # 0.05 ~ 0.90
 # 서비스 대상(넓은 시야 도말)과 같은 형태의 출처. WBC를 가운데 두고 자른 PBC·Raabin과 따로 봅니다.
 SMEAR_SOURCES = ("BCCD", "BCDD")
 
@@ -165,6 +165,8 @@ def main() -> None:
     parser.add_argument("--keep-suspects", action="store_true",
                         help="suspect_leaks.yaml의 의심 이미지를 제외하지 않음")
     parser.add_argument("--name", type=str, default=None, help="결과 폴더 (기본: 가중치 run 이름)")
+    parser.add_argument("--tune-on", choices=["all", "smear"], default="all",
+                        help="임계값을 고를 val 이미지: 전체(all) 또는 서비스 대상인 넓은 시야 도말(smear)만")
     args = parser.parse_args()
 
     counter = CellCounter(PREDICT_CONFIG, weights=args.weights)
@@ -198,7 +200,9 @@ def main() -> None:
             det[source] = detection_metrics(counter.weights, data_root, [test_imgs[i] for i in idx],
                                             counter.device, out_dir, source)
 
-    print("2/3 Val로 카운팅 임계값 탐색...")
+    if args.tune_on == "smear":
+        val_imgs = [p for p in val_imgs if meta.get(p.stem, {}).get("source") in SMEAR_SOURCES]
+    print(f"2/3 Val로 카운팅 임계값 탐색 ({args.tune_on}, {len(val_imgs)}장)...")
     val_dets, val_gts = collect(counter, val_imgs)
     best_conf, curve = tune_thresholds(val_dets, val_gts)
     plot_threshold_curve(curve, best_conf, out_dir / "threshold_curve.png")
@@ -230,6 +234,7 @@ def main() -> None:
         "detection_test": det,
         "counting_test": counting,
         "tuned_conf_from_val": best_conf,
+        "tuned_on": f"{args.tune_on} ({len(val_imgs)} val images)",
     }
     # 이미지별 개수 (두 모델을 같은 이미지에서 짝지어 비교할 때 사용)
     with (out_dir / "test_counts.csv").open("w", encoding="utf-8") as f:

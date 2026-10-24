@@ -1,7 +1,6 @@
 # 추론 설정 — app.py · backend · predict · evaluate 공용
-# 지금 값: TXL-PBC 재라벨로 학습한 YOLO11n (BCCD 이미지 101장, CPU 30 epoch) — 라벨 품질 실험 모델
-# Colab에서 본학습 후 runs/detect/txl_yolo11s/weights/best.pt 로 바꾸세요.
-weights: runs/detect/abl_txl_labels/weights/best.pt
+# 본학습 모델: TXL-PBC 882장 · YOLO11s · 100 epoch (Colab T4)
+weights: runs/detect/txl_yolo11s_s42/weights/best.pt
 device: auto
 
 parameters:
@@ -15,8 +14,9 @@ low_conf_threshold: 0.4
 
 # 클래스별 임계값 (선택). evaluate.py 결과의 tuned_conf_from_val 값을 옮겨 적으면
 # 카운트 오차가 가장 작은 설정으로 서비스됩니다. 비워 두면 parameters.conf 사용.
-# 아래 값은 abl_txl_labels를 TXL-PBC val에서 탐색한 결과 (runs/eval/abl_txl_labels/eval_summary.yaml)
+# 아래 값은 txl_yolo11s_s42를 TXL-PBC val(242장)에서 탐색한 결과 (runs/eval/txl_yolo11s_s42/eval_summary.yaml)
+# 넓은 시야 도말 val(57장)만으로 탐색해도 같은 값이 나왔습니다.
 class_conf:
-  RBC: 0.65
-  WBC: 0.7
-  Platelets: 0.2
+  RBC: 0.7
+  WBC: 0.25
+  Platelets: 0.6

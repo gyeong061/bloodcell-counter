@@ -1,0 +1,309 @@
+weights: runs/detect/txl_yolo11n_s42/weights/best.pt
+data: /home/claude/bloodcell-counter/data/txl/data.yaml
+excluded:
+  val: 10
+  test: 2
+  rules:
+  - suspect_leaks
+test_images: 124
+detection_test:
+  all:
+    images: 124
+    map50: 0.9873
+    map50_95: 0.874
+    precision: 0.9831
+    recall: 0.9619
+    per_class:
+      RBC:
+        precision: 0.972
+        recall: 0.949
+        map50: 0.991
+        map50_95: 0.907
+      WBC:
+        precision: 0.998
+        recall: 1.0
+        map50: 0.995
+        map50_95: 0.894
+      Platelets:
+        precision: 0.979
+        recall: 0.937
+        map50: 0.976
+        map50_95: 0.822
+  BCCD:
+    images: 18
+    map50: 0.9914
+    map50_95: 0.8546
+    precision: 0.9799
+    recall: 0.9796
+    per_class:
+      RBC:
+        precision: 0.945
+        recall: 0.939
+        map50: 0.984
+        map50_95: 0.877
+      WBC:
+        precision: 1.0
+        recall: 1.0
+        map50: 0.995
+        map50_95: 0.873
+      Platelets:
+        precision: 0.995
+        recall: 1.0
+        map50: 0.995
+        map50_95: 0.813
+  BCDD:
+    images: 14
+    map50: 0.9925
+    map50_95: 0.8071
+    precision: 0.9761
+    recall: 0.9777
+    per_class:
+      RBC:
+        precision: 0.965
+        recall: 0.955
+        map50: 0.99
+        map50_95: 0.775
+      WBC:
+        precision: 0.987
+        recall: 1.0
+        map50: 0.995
+        map50_95: 0.839
+  PBC:
+    images: 50
+    map50: 0.9941
+    map50_95: 0.9147
+    precision: 0.9741
+    recall: 0.9931
+    per_class:
+      RBC:
+        precision: 0.966
+        recall: 0.979
+        map50: 0.993
+        map50_95: 0.959
+      WBC:
+        precision: 0.993
+        recall: 1.0
+        map50: 0.995
+        map50_95: 0.925
+      Platelets:
+        precision: 0.964
+        recall: 1.0
+        map50: 0.994
+        map50_95: 0.859
+  Raabin-WBC:
+    images: 42
+    map50: 0.7152
+    map50_95: 0.6366
+    precision: 0.7288
+    recall: 0.8264
+    per_class:
+      RBC:
+        precision: 0.961
+        recall: 0.979
+        map50: 0.992
+        map50_95: 0.909
+      WBC:
+        precision: 0.988
+        recall: 1.0
+        map50: 0.995
+        map50_95: 0.885
+      Platelets:
+        precision: 0.238
+        recall: 0.5
+        map50: 0.158
+        map50_95: 0.116
+  smear:
+    images: 32
+    map50: 0.9921
+    map50_95: 0.8388
+    precision: 0.9801
+    recall: 0.9818
+    per_class:
+      RBC:
+        precision: 0.951
+        recall: 0.946
+        map50: 0.986
+        map50_95: 0.843
+      WBC:
+        precision: 0.994
+        recall: 1.0
+        map50: 0.995
+        map50_95: 0.857
+      Platelets:
+        precision: 0.995
+        recall: 1.0
+        map50: 0.995
+        map50_95: 0.817
+counting_test:
+  all:
+    default_conf_0.25:
+      RBC:
+        mae: 5.016
+        bias: 4.855
+        within_tol: 0.113
+        mape: 0.378
+      WBC:
+        mae: 0.04
+        bias: 0.008
+        within_tol: 0.992
+        mape: 0.03
+      Platelets:
+        mae: 0.121
+        bias: 0.105
+        within_tol: 0.984
+        mape: 0.118
+    tuned_conf:
+      RBC:
+        mae: 1.597
+        bias: 0.581
+        within_tol: 0.556
+        mape: 0.128
+      WBC:
+        mae: 0.016
+        bias: -0.016
+        within_tol: 0.992
+        mape: 0.005
+      Platelets:
+        mae: 0.097
+        bias: 0.048
+        within_tol: 0.992
+        mape: 0.147
+    tuned_conf_ci95:
+      RBC:
+        mae:
+        - 1.347
+        - 1.887
+        within_tol:
+        - 0.476
+        - 0.637
+      WBC:
+        mae:
+        - 0.0
+        - 0.048
+        within_tol:
+        - 0.976
+        - 1.0
+      Platelets:
+        mae:
+        - 0.048
+        - 0.153
+        within_tol:
+        - 0.976
+        - 1.0
+  BCCD:
+    images: 18
+    tuned_conf:
+      RBC:
+        mae: 2.722
+        bias: 0.611
+        within_tol: 0.389
+        mape: 0.132
+      WBC:
+        mae: 0.0
+        bias: 0.0
+        within_tol: 1.0
+        mape: 0.0
+      Platelets:
+        mae: 0.056
+        bias: 0.056
+        within_tol: 1.0
+        mape: 0.1
+  BCDD:
+    images: 14
+    tuned_conf:
+      RBC:
+        mae: 1.357
+        bias: 0.929
+        within_tol: 0.429
+        mape: 0.084
+      WBC:
+        mae: 0.0
+        bias: 0.0
+        within_tol: 1.0
+        mape: 0.0
+      Platelets:
+        mae: 0.0
+        bias: 0.0
+        within_tol: 1.0
+        mape: null
+  PBC:
+    images: 50
+    tuned_conf:
+      RBC:
+        mae: 1.42
+        bias: 0.34
+        within_tol: 0.6
+        mape: 0.114
+      WBC:
+        mae: 0.04
+        bias: -0.04
+        within_tol: 0.98
+        mape: 0.013
+      Platelets:
+        mae: 0.1
+        bias: 0.06
+        within_tol: 1.0
+        mape: 0.091
+  Raabin-WBC:
+    images: 42
+    tuned_conf:
+      RBC:
+        mae: 1.405
+        bias: 0.738
+        within_tol: 0.619
+        mape: 0.157
+      WBC:
+        mae: 0.0
+        bias: 0.0
+        within_tol: 1.0
+        mape: 0.0
+      Platelets:
+        mae: 0.143
+        bias: 0.048
+        within_tol: 0.976
+        mape: 1.0
+  smear:
+    images: 32
+    tuned_conf:
+      RBC:
+        mae: 2.125
+        bias: 0.75
+        within_tol: 0.406
+        mape: 0.111
+      WBC:
+        mae: 0.0
+        bias: 0.0
+        within_tol: 1.0
+        mape: 0.0
+      Platelets:
+        mae: 0.031
+        bias: 0.031
+        within_tol: 1.0
+        mape: 0.1
+    tuned_conf_ci95:
+      RBC:
+        mae:
+        - 1.562
+        - 2.75
+        within_tol:
+        - 0.219
+        - 0.594
+      WBC:
+        mae:
+        - 0.0
+        - 0.0
+        within_tol:
+        - 1.0
+        - 1.0
+      Platelets:
+        mae:
+        - 0.0
+        - 0.094
+        within_tol:
+        - 1.0
+        - 1.0
+tuned_conf_from_val:
+  RBC: 0.8
+  WBC: 0.55
+  Platelets: 0.5
+tuned_on: all (242 val images)

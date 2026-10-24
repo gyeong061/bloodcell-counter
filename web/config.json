@@ -1,10 +1,10 @@
 {
- "model_note": "YOLO11n · TXL-PBC 재라벨 BCCD 시야로 학습 · 30 epoch.",
- "weights": "abl_txl_labels",
+ "model_note": "YOLO11n · TXL-PBC로 학습 · 100 epoch.",
+ "weights": "txl_yolo11n_s42",
  "class_conf": {
-  "RBC": 0.65,
-  "WBC": 0.7,
-  "Platelets": 0.2
+  "RBC": 0.8,
+  "WBC": 0.55,
+  "Platelets": 0.5
  },
  "iou": 0.5,
  "imgsz": 640,
